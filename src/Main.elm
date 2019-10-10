@@ -17,10 +17,23 @@ main =
 -- Coordinates in a Mercator projection
 type alias Coord = { x: Float, y: Float }
 type alias Model = { centre: Coord, zoom: Int }
+type alias Lat = Float
+type alias Lng = Float
+
+sec x = 1 / (cos x)
+
+toCoord : Lat -> Lng -> Coord
+toCoord lat lng =
+    let
+        lat_rad = lat * pi / 180
+        x = (lng + 180) / 360
+        y = (1 - (logBase e ((tan lat_rad) + (sec lat_rad))) / pi) / 2
+    in
+        Coord x y
 
 
 init : Model
-init = Model (Coord 0.0 0.3) 16
+init = Model (toCoord 51.5 0.0) 16
 
 
 
