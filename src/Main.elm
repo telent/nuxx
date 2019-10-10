@@ -13,7 +13,7 @@ main =
 
 
 
--- MODEL
+-- MATHS
 
 -- Coordinates in a Mercator projection
 type alias Coord = { x: Float, y: Float }
@@ -28,6 +28,9 @@ type alias TileNumber = (Int, Int)
 type alias Lat = Float
 type alias Lng = Float
 
+-- project latling to co-ordinates based on pseudocode at
+-- https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Zoom_levels
+
 sec x = 1 / (cos x)
 
 toCoord : Lat -> Lng -> Coord
@@ -38,10 +41,6 @@ toCoord lat lng =
         y = (1 - (logBase e ((tan lat_rad) + (sec lat_rad))) / pi) / 2
     in
         Coord x y
-
-
-init : Model
-init = Model (toCoord 51.5 0.0) 16
 
 tileCovering : Coord -> Zoom -> TileNumber
 tileCovering c z = (truncate (toFloat (2 ^ z) * c.x),
@@ -55,14 +54,26 @@ tileUrl (x,y) z =
                        "/", String.fromInt y,
                        ".png" ]
 
+-- MODEL
+
+init : Model
+init = Model (toCoord 51.5 0.0) 16
+
 
 -- UPDATE
 
+-- this could be two functions: turn pixels into Coordinates,
+-- and sum Coordinates
+translatePixels : Coord -> Zoom -> Int -> Int -> Coord
+translatePixels old z x y =
+    let x_float = toFloat x / toFloat ( 2 ^ (z + 8))
+        y_float = toFloat y / toFloat ( 2 ^ (z + 8))
+    in Coord (old.x + x_float) (old.y + y_float)
 
 type Msg
   = ZoomIn
   | ZoomOut
-
+  | Scroll Int Int
 
 update : Msg -> Model -> Model
 update msg model =
@@ -73,6 +84,8 @@ update msg model =
     ZoomOut ->
       Model model.centre (model.zoom - 1)
 
+    Scroll x y ->
+      Model (translatePixels model.centre model.zoom x y) model.zoom
 
 
 -- VIEW
@@ -88,4 +101,8 @@ view model =
         , img [ src (tileUrl tile model.zoom) ] []
         , div [] [ text (String.fromInt model.zoom ) ]
         , button [ onClick ZoomIn ] [ text "+" ]
+        , button [ onClick (Scroll 0 -10) ] [ text "^" ]
+        , button [ onClick (Scroll 10 0) ] [ text ">" ]
+        , button [ onClick (Scroll 0 10) ] [ text "V" ]
+        , button [ onClick (Scroll -10 0) ] [ text "<" ]
         ]
