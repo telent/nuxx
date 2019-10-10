@@ -1,5 +1,6 @@
 import Browser
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, div, text, img)
+import Html.Attributes exposing (src)
 import Html.Events exposing (onClick)
 
 
@@ -79,8 +80,12 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-  div []
-    [ button [ onClick ZoomOut ] [ text "-" ]
-    , div [] [ text (String.fromInt model.zoom ) ]
-    , button [ onClick ZoomIn ] [ text "+" ]
-    ]
+    let coord = model.centre
+        tile = tileCovering coord model.zoom
+        d = Debug.log "hey" (coord, tile)
+    in div []
+        [ button [ onClick ZoomOut ] [ text "-" ]
+        , img [ src (tileUrl tile model.zoom) ] []
+        , div [] [ text (String.fromInt model.zoom ) ]
+        , button [ onClick ZoomIn ] [ text "+" ]
+        ]
