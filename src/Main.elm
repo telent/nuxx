@@ -16,7 +16,10 @@ main =
 
 -- Coordinates in a Mercator projection
 type alias Coord = { x: Float, y: Float }
-type alias Model = { centre: Coord, zoom: Int }
+
+-- zoom level
+type alias Zoom = Int
+
 type alias Lat = Float
 type alias Lng = Float
 
