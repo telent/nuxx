@@ -20,6 +20,10 @@ type alias Coord = { x: Float, y: Float }
 -- zoom level
 type alias Zoom = Int
 
+type alias Model = { centre: Coord, zoom: Zoom }
+
+type alias TileNumber = (Int, Int)
+
 type alias Lat = Float
 type alias Lng = Float
 
@@ -38,6 +42,17 @@ toCoord lat lng =
 init : Model
 init = Model (toCoord 51.5 0.0) 16
 
+tileCovering : Coord -> Zoom -> TileNumber
+tileCovering c z = (truncate (toFloat (2 ^ z) * c.x),
+                    truncate (toFloat (2 ^ z) * c.y))
+
+tileUrl : TileNumber -> Zoom -> String
+tileUrl (x,y) z =
+    String.concat ["https://a.tile.openstreetmap.org",
+                       "/", (String.fromInt z),
+                       "/", String.fromInt x,
+                       "/", String.fromInt y,
+                       ".png" ]
 
 
 -- UPDATE
