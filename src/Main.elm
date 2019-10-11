@@ -42,9 +42,34 @@ toCoord lat lng =
     in
         Coord x y
 
+pixelsToCoord z x y =
+    let x_float = toFloat x / toFloat ( 2 ^ (z + 8))
+        y_float = toFloat y / toFloat ( 2 ^ (z + 8))
+    in Coord x_float y_float
+
+reflect : Coord -> Coord
+reflect c = Coord -c.x -c.y
+
+translate : Coord -> Coord -> Coord
+translate base offset =
+    Coord (base.x + offset.x) (base.y + offset.y)
+
+translatePixels : Coord -> Zoom -> Int -> Int -> Coord
+translatePixels old z x y = translate old (pixelsToCoord z x y)
+
+
 tileCovering : Coord -> Zoom -> TileNumber
 tileCovering c z = (truncate (toFloat (2 ^ z) * c.x),
                     truncate (toFloat (2 ^ z) * c.y))
+
+boundingTiles : Coord -> Zoom -> Int -> Int -> (TileNumber, TileNumber)
+boundingTiles centre z width height =
+    -- find the tiles needed to cover the area (`width` x `height`)
+    -- about the point at `centre`
+    let delta = pixelsToCoord z (width // 2) (height // 2)
+        minCoord = translate centre (reflect delta)
+        maxCoord = translate centre delta
+    in ((tileCovering minCoord z), (tileCovering maxCoord z))
 
 tileUrl : TileNumber -> Zoom -> String
 tileUrl (x,y) z =
@@ -61,14 +86,6 @@ init = Model (toCoord 51.5 0.0) 16
 
 
 -- UPDATE
-
--- this could be two functions: turn pixels into Coordinates,
--- and sum Coordinates
-translatePixels : Coord -> Zoom -> Int -> Int -> Coord
-translatePixels old z x y =
-    let x_float = toFloat x / toFloat ( 2 ^ (z + 8))
-        y_float = toFloat y / toFloat ( 2 ^ (z + 8))
-    in Coord (old.x + x_float) (old.y + y_float)
 
 type Msg
   = ZoomIn
@@ -90,15 +107,25 @@ update msg model =
 
 -- VIEW
 
+tileImg zoom tilenumber = img [ src (tileUrl tilenumber zoom) ] []
+
+canvas centre zoom width height =
+    let (mintile, maxtile) = boundingTiles centre zoom width height
+        xs = List.range (Tuple.first mintile) (Tuple.first maxtile)
+        ys = List.range (Tuple.second mintile) (Tuple.second maxtile)
+    in  div []
+        (List.map
+             (\ y -> div []
+                     (List.map (\ x -> tileImg zoom (x, y)) xs))
+             ys)
 
 view : Model -> Html Msg
 view model =
     let coord = model.centre
-        tile = tileCovering coord model.zoom
-        d = Debug.log "hey" (coord, tile)
+        tiles = canvas coord model.zoom 600 600
     in div []
         [ button [ onClick ZoomOut ] [ text "-" ]
-        , img [ src (tileUrl tile model.zoom) ] []
+        , tiles
         , div [] [ text (String.fromInt model.zoom ) ]
         , button [ onClick ZoomIn ] [ text "+" ]
         , button [ onClick (Scroll 0 -10) ] [ text "^" ]
