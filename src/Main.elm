@@ -121,18 +121,20 @@ canvas centre zoom width height =
     let (mintile, maxtile) = boundingTiles centre zoom width height
         -- offset is pixel difference between centre (which *should*
         -- be the middle of the image) and actual middle of the canvas
+        (pixelCentreX,pixelCentreY) = pixelFromCoord centre zoom
+        leftedge = mintile.x * 256
+        topedge = mintile.y * 256
+        offsetX = pixelCentreX - (width // 2) - leftedge
+        offsetY = pixelCentreY - (height // 2) - topedge
         pixWidth = (1 + maxtile.x - mintile.x) * 256
         pixHeight = (1 + maxtile.y - mintile.y) * 256
-        (pixelCentreX,pixelCentreY) = pixelFromCoord centre zoom
-        offsetX = (256 * mintile.x) + (pixWidth - width) // 2
-        offsetY = (256 * mintile.y) + (pixHeight - height) // 2
         xs = List.range mintile.x maxtile.x
         ys = List.range mintile.y maxtile.y
     in  div [style "position" "absolute"
             ,style "width" (px pixWidth)
             ,style "height" (px pixHeight)
-            ,style "left" (px (offsetX - pixelCentreX))
-            ,style "top" (px (offsetY - pixelCentreY))
+            ,style "left" (px -offsetX)
+            ,style "top" (px -offsetY)
             ,style "lineHeight" (px 0)]
         (List.map
              (\ y -> div []
