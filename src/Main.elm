@@ -71,14 +71,6 @@ boundingTiles centre z width height =
         maxCoord = translate centre delta
     in ((tileCovering minCoord z), (tileCovering maxCoord z))
 
-tileUrl : TileNumber -> Zoom -> String
-tileUrl (x,y) z =
-    String.concat ["https://a.tile.openstreetmap.org",
-                       "/", (String.fromInt z),
-                       "/", String.fromInt x,
-                       "/", String.fromInt y,
-                       ".png" ]
-
 -- MODEL
 
 init : Model
@@ -106,6 +98,14 @@ update msg model =
 
 
 -- VIEW
+
+tileUrl : TileNumber -> Zoom -> String
+tileUrl (x,y) z =
+    String.concat ["https://a.tile.openstreetmap.org",
+                       "/", (String.fromInt z),
+                       "/", String.fromInt x,
+                       "/", String.fromInt y,
+                       ".png" ]
 
 tileImg zoom tilenumber = img [ src (tileUrl tilenumber zoom) ] []
 
