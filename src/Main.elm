@@ -50,9 +50,9 @@ pixelsToCoord z x y =
 reflect : Coord -> Coord
 reflect c = Coord -c.x -c.y
 
-translate : Coord -> Coord -> Coord
+-- translate : a -> a -> a
 translate base offset =
-    Coord (base.x + offset.x) (base.y + offset.y)
+    { base | x = (base.x + offset.x), y = (base.y + offset.y) }
 
 translatePixels : Coord -> Zoom -> Int -> Int -> Coord
 translatePixels old z x y = translate old (pixelsToCoord z x y)
@@ -74,7 +74,8 @@ boundingTiles centre z width height =
     let delta = pixelsToCoord z (width // 2) (height // 2)
         minCoord = translate centre (reflect delta)
         maxCoord = translate centre delta
-    in ((tileCovering minCoord z), (tileCovering maxCoord z))
+    in ((tileCovering minCoord z),
+        (translate (tileCovering maxCoord z) (TileNumber 1 1)))
 
 -- MODEL
 
