@@ -62,6 +62,11 @@ tileCovering : Coord -> Zoom -> TileNumber
 tileCovering c z =
     TileNumber (truncate (toFloat (2 ^ z) * c.x)) (truncate (toFloat (2 ^ z) * c.y))
 
+pixelFromCoord : Coord -> Zoom -> (Int, Int)
+pixelFromCoord c z =
+    let {x,y} = tileCovering c (z + 8)
+    in (x,y)
+
 boundingTiles : Coord -> Zoom -> Int -> Int -> (TileNumber, TileNumber)
 boundingTiles centre z width height =
     -- find the tiles needed to cover the area (`width` x `height`)
@@ -113,13 +118,20 @@ px x = String.fromInt x ++ "px"
 
 canvas centre zoom width height =
     let (mintile, maxtile) = boundingTiles centre zoom width height
+        -- offset is pixel difference between centre (which *should*
+        -- be the middle of the image) and actual middle of the canvas
+        pixWidth = (1 + maxtile.x - mintile.x) * 256
+        pixHeight = (1 + maxtile.y - mintile.y) * 256
+        (pixelCentreX,pixelCentreY) = pixelFromCoord centre zoom
+        offsetX = (256 * mintile.x) + (pixWidth - width) // 2
+        offsetY = (256 * mintile.y) + (pixHeight - height) // 2
         xs = List.range mintile.x maxtile.x
         ys = List.range mintile.y maxtile.y
     in  div [style "position" "absolute"
-            ,style "width" (px ((1 + maxtile.x - mintile.x) * 256))
-            ,style "height" (px ((1 + maxtile.y - mintile.y) * 256))
-            ,style "left" (px 0)
-            ,style "top" (px 0)
+            ,style "width" (px pixWidth)
+            ,style "height" (px pixHeight)
+            ,style "left" (px (offsetX - pixelCentreX))
+            ,style "top" (px (offsetY - pixelCentreY))
             ,style "lineHeight" (px 0)]
         (List.map
              (\ y -> div []
