@@ -23,7 +23,7 @@ type alias Zoom = Int
 
 type alias Model = { centre: Coord, zoom: Zoom }
 
-type alias TileNumber = (Int, Int)
+type alias TileNumber = { x: Int, y: Int }
 
 type alias Lat = Float
 type alias Lng = Float
@@ -59,8 +59,8 @@ translatePixels old z x y = translate old (pixelsToCoord z x y)
 
 
 tileCovering : Coord -> Zoom -> TileNumber
-tileCovering c z = (truncate (toFloat (2 ^ z) * c.x),
-                    truncate (toFloat (2 ^ z) * c.y))
+tileCovering c z =
+    TileNumber (truncate (toFloat (2 ^ z) * c.x)) (truncate (toFloat (2 ^ z) * c.y))
 
 boundingTiles : Coord -> Zoom -> Int -> Int -> (TileNumber, TileNumber)
 boundingTiles centre z width height =
@@ -100,9 +100,9 @@ update msg model =
 -- VIEW
 
 tileUrl : TileNumber -> Zoom -> String
-tileUrl (x,y) z =
+tileUrl {x,y} z =
     String.concat ["https://a.tile.openstreetmap.org",
-                       "/", (String.fromInt z),
+                       "/", String.fromInt z,
                        "/", String.fromInt x,
                        "/", String.fromInt y,
                        ".png" ]
@@ -111,12 +111,12 @@ tileImg zoom tilenumber = img [ src (tileUrl tilenumber zoom) ] []
 
 canvas centre zoom width height =
     let (mintile, maxtile) = boundingTiles centre zoom width height
-        xs = List.range (Tuple.first mintile) (Tuple.first maxtile)
-        ys = List.range (Tuple.second mintile) (Tuple.second maxtile)
     in  div []
+        xs = List.range mintile.x maxtile.x
+        ys = List.range mintile.y maxtile.y
         (List.map
              (\ y -> div []
-                     (List.map (\ x -> tileImg zoom (x, y)) xs))
+                     (List.map (\ x -> tileImg zoom (TileNumber x y)) xs))
              ys)
 
 view : Model -> Html Msg
