@@ -1,6 +1,6 @@
 import Browser
-import Html exposing (Html, button, div, text, img)
-import Html.Attributes exposing (src)
+import Html exposing (Html, button, div, span, text, img)
+import Html.Attributes exposing (src, style)
 import Html.Events exposing (onClick)
 
 
@@ -109,23 +109,39 @@ tileUrl {x,y} z =
 
 tileImg zoom tilenumber = img [ src (tileUrl tilenumber zoom) ] []
 
+px x = String.fromInt x ++ "px"
+
 canvas centre zoom width height =
     let (mintile, maxtile) = boundingTiles centre zoom width height
-    in  div []
         xs = List.range mintile.x maxtile.x
         ys = List.range mintile.y maxtile.y
+    in  div [style "position" "absolute"
+            ,style "width" (px ((1 + maxtile.x - mintile.x) * 256))
+            ,style "height" (px ((1 + maxtile.y - mintile.y) * 256))
+            ,style "left" (px 0)
+            ,style "top" (px 0)
+            ,style "lineHeight" (px 0)]
         (List.map
              (\ y -> div []
                      (List.map (\ x -> tileImg zoom (TileNumber x y)) xs))
              ys)
 
+portalWidth = 600
+portalHeight = 600
+
+
 view : Model -> Html Msg
 view model =
     let coord = model.centre
-        tiles = canvas coord model.zoom 600 600
+        tiles = canvas coord model.zoom portalWidth portalHeight
     in div []
         [ button [ onClick ZoomOut ] [ text "-" ]
-        , tiles
+        , (div [ style "width" (px portalWidth)
+               , style "height" (px portalHeight)
+               , style "display" "inline-block"
+               , style "position" "relative"
+               , style "overflow" "hidden"]
+               [tiles])
         , div [] [ text (String.fromInt model.zoom ) ]
         , button [ onClick ZoomIn ] [ text "+" ]
         , button [ onClick (Scroll 0 -10) ] [ text "^" ]
