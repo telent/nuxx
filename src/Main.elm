@@ -2,6 +2,8 @@ import Browser
 import Html exposing (Html, button, div, span, text, img)
 import Html.Attributes exposing (src, style)
 import Html.Events exposing (onClick)
+import Html.Events.Extra.Pointer as Pointer
+import Maybe exposing (Maybe)
 
 
 
@@ -77,9 +79,20 @@ boundingTiles centre z width height =
 
 -- MODEL
 
-type alias Model = { centre: Coord, zoom: Zoom }
+type Drag
+    = None
+    | Dragging (Float, Float) (Float,Float)
+
+dragTo : Drag -> (Float,Float) -> Drag
+dragTo d dest =
+    case d of
+        None -> None
+        Dragging from to -> Dragging from dest
+
+type alias Model = { centre: Coord, zoom: Zoom, drag: Drag }
+
 init : Model
-init = Model (toCoord 51.5 0.0) 16
+init = Model (toCoord 51.5 0.0) 16 None
 
 
 -- UPDATE
@@ -88,19 +101,31 @@ type Msg
   = ZoomIn
   | ZoomOut
   | Scroll Int Int
+  | PointerDown (Float, Float)
+  | PointerMove (Float, Float)
+  | PointerUp (Float, Float)
+
 
 update : Msg -> Model -> Model
 update msg model =
   case msg of
     ZoomIn ->
-      Model model.centre (model.zoom + 1)
+      { model | zoom = model.zoom + 1 }
 
     ZoomOut ->
-      Model model.centre (model.zoom - 1)
+      { model | zoom = model.zoom - 1 }
 
     Scroll x y ->
-      Model (translatePixels model.centre model.zoom x y) model.zoom
+      { model | centre = translatePixels model.centre model.zoom x y }
 
+    PointerDown (x,y) ->
+      { model | drag = Dragging (x,y) (x,y) }
+
+    PointerMove (x,y) ->
+      { model | drag = dragTo model.drag (x,y) }
+
+    PointerUp (x,y) ->
+      { model | drag = None }
 
 -- VIEW
 
@@ -134,7 +159,10 @@ canvas centre zoom width height =
             ,style "height" (px pixHeight)
             ,style "left" (px -offsetX)
             ,style "top" (px -offsetY)
-            ,style "lineHeight" (px 0)]
+            ,style "lineHeight" (px 0)
+            ,Pointer.onUp (\e -> PointerUp e.pointer.offsetPos)
+            ,Pointer.onMove (\e -> PointerMove e.pointer.offsetPos)
+            ,Pointer.onDown (\e -> PointerDown e.pointer.offsetPos) ]
         (List.map
              (\ y -> div []
                      (List.map (\ x -> tileImg zoom (TileNumber x y)) xs))
@@ -143,6 +171,12 @@ canvas centre zoom width height =
 portalWidth = 600
 portalHeight = 600
 
+dragmsg d =
+    case d of
+        Dragging from (x,y) ->
+            "drag to" ++ (String.fromFloat x) ++ ", " ++  (String.fromFloat y)
+        None ->
+            "not dragging"
 
 view : Model -> Html Msg
 view model =
@@ -156,6 +190,7 @@ view model =
                , style "overflow" "hidden"]
                [tiles])
         , div [] [ text (String.fromInt model.zoom ) ]
+        , div [] [ text (dragmsg model.drag) ]
         , button [ onClick ZoomOut ] [ text "-" ]
         , button [ onClick ZoomIn ] [ text "+" ]
         , button [ onClick (Scroll 0 -10) ] [ text "^" ]
