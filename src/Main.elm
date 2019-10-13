@@ -42,7 +42,7 @@ toCoord lat lng =
     in
         Coord x y
 
-pixelsToCoord z x y =
+pixelsToCoord z (x,y) =
     let x_float = toFloat x / toFloat ( 2 ^ (z + 8))
         y_float = toFloat y / toFloat ( 2 ^ (z + 8))
     in Coord x_float y_float
@@ -54,8 +54,8 @@ reflect c = Coord -c.x -c.y
 translate base offset =
     { base | x = (base.x + offset.x), y = (base.y + offset.y) }
 
-translatePixels : Coord -> Zoom -> Int -> Int -> Coord
-translatePixels old z x y = translate old (pixelsToCoord z x y)
+translatePixels : Coord -> Zoom -> (Int, Int) -> Coord
+translatePixels old z (x, y) = translate old (pixelsToCoord z (x, y))
 
 
 tileCovering : Coord -> Zoom -> TileNumber
@@ -71,7 +71,7 @@ boundingTiles : Coord -> Zoom -> Int -> Int -> (TileNumber, TileNumber)
 boundingTiles centre z width height =
     -- find the tiles needed to cover the area (`width` x `height`)
     -- about the point at `centre`
-    let delta = pixelsToCoord z (width // 2) (height // 2)
+    let delta = pixelsToCoord z ((width // 2), (height // 2))
         minCoord = translate centre (reflect delta)
         maxCoord = translate centre delta
     in ((tileCovering minCoord z),
@@ -81,13 +81,18 @@ boundingTiles centre z width height =
 
 type Drag
     = None
-    | Dragging (Float, Float) (Float,Float)
+    | Dragging  (Int, Int)  (Int, Int)
 
-dragTo : Drag -> (Float,Float) -> Drag
+dragTo : Drag ->  (Int, Int) -> Drag
 dragTo d dest =
     case d of
         None -> None
         Dragging from to -> Dragging from dest
+
+dragDelta d =
+    case d of
+        None -> (0,0)
+        Dragging (fx,fy) (tx,ty) -> (fx-tx, fy-ty)
 
 type alias Model = { centre: Coord, zoom: Zoom, drag: Drag }
 
@@ -101,9 +106,9 @@ type Msg
   = ZoomIn
   | ZoomOut
   | Scroll Int Int
-  | PointerDown (Float, Float)
-  | PointerMove (Float, Float)
-  | PointerUp (Float, Float)
+  | PointerDown (Int, Int)
+  | PointerMove (Int, Int)
+  | PointerUp (Int, Int)
 
 
 update : Msg -> Model -> Model
@@ -116,7 +121,7 @@ update msg model =
       { model | zoom = model.zoom - 1 }
 
     Scroll x y ->
-      { model | centre = translatePixels model.centre model.zoom x y }
+      { model | centre = translatePixels model.centre model.zoom (x,y) }
 
     PointerDown (x,y) ->
       { model | drag = Dragging (x,y) (x,y) }
@@ -125,7 +130,8 @@ update msg model =
       { model | drag = dragTo model.drag (x,y) }
 
     PointerUp (x,y) ->
-      { model | drag = None }
+      { model | drag = None,
+                centre = translatePixels model.centre model.zoom (dragDelta model.drag) }
 
 -- VIEW
 
@@ -154,15 +160,16 @@ canvas centre zoom width height =
         pixHeight = (1 + maxtile.y - mintile.y) * 256
         xs = List.range mintile.x maxtile.x
         ys = List.range mintile.y maxtile.y
+        epos e = Tuple.mapBoth floor floor e.pointer.clientPos
     in  div [style "position" "absolute"
             ,style "width" (px pixWidth)
             ,style "height" (px pixHeight)
             ,style "left" (px -offsetX)
             ,style "top" (px -offsetY)
             ,style "lineHeight" (px 0)
-            ,Pointer.onUp (\e -> PointerUp e.pointer.offsetPos)
-            ,Pointer.onMove (\e -> PointerMove e.pointer.offsetPos)
-            ,Pointer.onDown (\e -> PointerDown e.pointer.offsetPos) ]
+            ,Pointer.onUp (\e -> PointerUp (epos e))
+            ,Pointer.onMove (\e -> PointerMove (epos e))
+            ,Pointer.onDown (\e -> PointerDown (epos e)) ]
         (List.map
              (\ y -> div []
                      (List.map (\ x -> tileImg zoom (TileNumber x y)) xs))
@@ -172,15 +179,12 @@ portalWidth = 600
 portalHeight = 600
 
 dragmsg d =
-    case d of
-        Dragging from (x,y) ->
-            "drag to" ++ (String.fromFloat x) ++ ", " ++  (String.fromFloat y)
-        None ->
-            "not dragging"
+    let (x,y) = (dragDelta d)
+    in "drag delta" ++ (String.fromInt x) ++ "," ++ (String.fromInt y)
 
 view : Model -> Html Msg
 view model =
-    let coord = model.centre
+    let coord = translate model.centre (pixelsToCoord model.zoom (dragDelta model.drag))
         tiles = canvas coord model.zoom portalWidth portalHeight
     in div []
         [ (div [ style "width" (px portalWidth)
@@ -190,7 +194,7 @@ view model =
                , style "overflow" "hidden"]
                [tiles])
         , div [] [ text (String.fromInt model.zoom ) ]
-        , div [] [ text (dragmsg model.drag) ]
+--        , div [] [ text (dragmsg model.drag) ]
         , button [ onClick ZoomOut ] [ text "-" ]
         , button [ onClick ZoomIn ] [ text "+" ]
         , button [ onClick (Scroll 0 -10) ] [ text "^" ]
