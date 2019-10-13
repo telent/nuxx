@@ -21,8 +21,6 @@ type alias Coord = { x: Float, y: Float }
 -- zoom level
 type alias Zoom = Int
 
-type alias Model = { centre: Coord, zoom: Zoom }
-
 type alias TileNumber = { x: Int, y: Int }
 
 type alias Lat = Float
@@ -79,6 +77,7 @@ boundingTiles centre z width height =
 
 -- MODEL
 
+type alias Model = { centre: Coord, zoom: Zoom }
 init : Model
 init = Model (toCoord 51.5 0.0) 16
 
