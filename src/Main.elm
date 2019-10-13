@@ -150,17 +150,17 @@ view model =
     let coord = model.centre
         tiles = canvas coord model.zoom portalWidth portalHeight
     in div []
-        [ button [ onClick ZoomOut ] [ text "-" ]
-        , (div [ style "width" (px portalWidth)
+        [ (div [ style "width" (px portalWidth)
                , style "height" (px portalHeight)
                , style "display" "inline-block"
                , style "position" "relative"
                , style "overflow" "hidden"]
                [tiles])
         , div [] [ text (String.fromInt model.zoom ) ]
+        , button [ onClick ZoomOut ] [ text "-" ]
         , button [ onClick ZoomIn ] [ text "+" ]
         , button [ onClick (Scroll 0 -10) ] [ text "^" ]
-        , button [ onClick (Scroll 10 0) ] [ text ">" ]
         , button [ onClick (Scroll 0 10) ] [ text "V" ]
         , button [ onClick (Scroll -10 0) ] [ text "<" ]
+        , button [ onClick (Scroll 10 0) ] [ text ">" ]
         ]
