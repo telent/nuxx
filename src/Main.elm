@@ -4,14 +4,17 @@ import Html.Attributes exposing (src, style, width, height)
 import Html.Events exposing (onClick)
 import Html.Events.Extra.Pointer as Pointer
 import Maybe exposing (Maybe)
-
+import Http
 
 
 -- MAIN
 
 
 main =
-  Browser.sandbox { init = init, update = update, view = view }
+  Browser.element { init = init
+                  , update = update
+                  , subscriptions = subscriptions
+                  , view = view }
 
 
 
@@ -96,9 +99,13 @@ dragDelta d =
 
 type alias Model = { centre: Coord, zoom: Zoom, drag: Drag }
 
-init : Model
-init = Model (toCoord 51.5 0.0) 16 None
+init : () -> (Model, Cmd Msg)
+init _ = (Model (toCoord 51.5 0.0) 16 None, Cmd.none)
 
+-- SUBSCRIPTIONS
+
+subscriptions : Model -> Sub Msg
+subscriptions model = Sub.none
 
 -- UPDATE
 
@@ -111,8 +118,10 @@ type Msg
   | PointerUp (Int, Int)
 
 
-update : Msg -> Model -> Model
-update msg model =
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model = (update_ msg model, Cmd.none)
+
+update_ msg model =
   case msg of
     ZoomIn ->
       { model | zoom = model.zoom + 1 }
