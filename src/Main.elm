@@ -1,6 +1,6 @@
 import Browser
 import Html exposing (Html, button, div, span, text, img)
-import Html.Attributes exposing (src, style)
+import Html.Attributes exposing (src, style, width, height)
 import Html.Events exposing (onClick)
 import Html.Events.Extra.Pointer as Pointer
 import Maybe exposing (Maybe)
@@ -143,7 +143,9 @@ tileUrl {x,y} z =
                        "/", String.fromInt y,
                        ".png" ]
 
-tileImg zoom tilenumber = img [ src (tileUrl tilenumber zoom) ] []
+tileImg zoom tilenumber = img [ width 256,
+                                height 256,
+                                src (tileUrl tilenumber zoom) ] []
 
 px x = String.fromInt x ++ "px"
 
