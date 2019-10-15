@@ -1,11 +1,11 @@
 import Browser
-import Html exposing (Html, button, div, span, text, img)
+import Html exposing (Html, button, div, span, text, img, pre)
 import Html.Attributes exposing (src, style, width, height)
 import Html.Events exposing (onClick)
 import Html.Events.Extra.Pointer as Pointer
 import Maybe exposing (Maybe)
 import Http
-
+import Json.Decode as D
 
 -- MAIN
 
@@ -97,10 +97,14 @@ dragDelta d =
         None -> (0,0)
         Dragging (fx,fy) (tx,ty) -> (fx-tx, fy-ty)
 
-type alias Model = { centre: Coord, zoom: Zoom, drag: Drag, track: String }
+type alias Model =
+    { centre: Coord
+    , zoom: Zoom
+    , drag: Drag
+    , track: List Trackpoint }
 
 init : () -> (Model, Cmd Msg)
-init _ = (Model (toCoord 51.5 0.0) 16 None "", fetch)
+init _ = (Model (toCoord 51.5 0.0) 16 None [], fetch)
 
 -- SUBSCRIPTIONS
 
@@ -109,10 +113,21 @@ subscriptions model = Sub.none
 
 fetch = Http.get
         { url = "//localhost:8001/activities"
-        , expect = Http.expectString Loaded
+        , expect = Http.expectJson Loaded trackDecoder
         }
 
-parseTrack track = track
+type alias Trackpoint =
+    { ts : String
+    , ele : Int
+    }
+
+pointDecoder : D.Decoder Trackpoint
+pointDecoder = D.map2 Trackpoint
+               (D.field "ts" D.string)
+               (D.field "ele" D.int)
+
+trackDecoder : D.Decoder (List Trackpoint)
+trackDecoder = D.list pointDecoder
 
 -- UPDATE
 
@@ -123,7 +138,7 @@ type Msg
   | PointerDown (Int, Int)
   | PointerMove (Int, Int)
   | PointerUp (Int, Int)
-  | Loaded (Result  Http.Error String)
+  | Loaded (Result  Http.Error (List Trackpoint))
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -152,7 +167,7 @@ update_ msg model =
 
     Loaded result ->
         case result of
-            Ok body -> { model | track = parseTrack body }
+            Ok track -> { model | track = track }
             Err _ -> model
 
 -- VIEW
@@ -202,10 +217,6 @@ canvas centre zoom width height =
 portalWidth = 600
 portalHeight = 600
 
-dragmsg d =
-    let (x,y) = (dragDelta d)
-    in "drag delta" ++ (String.fromInt x) ++ "," ++ (String.fromInt y)
-
 view : Model -> Html Msg
 view model =
     let coord = translate model.centre (pixelsToCoord model.zoom (dragDelta model.drag))
@@ -218,11 +229,11 @@ view model =
                , style "overflow" "hidden"]
                [tiles])
         , div [] [ text (String.fromInt model.zoom ) ]
---        , div [] [ text (dragmsg model.drag) ]
         , button [ onClick ZoomOut ] [ text "-" ]
         , button [ onClick ZoomIn ] [ text "+" ]
         , button [ onClick (Scroll 0 -10) ] [ text "^" ]
         , button [ onClick (Scroll 0 10) ] [ text "V" ]
         , button [ onClick (Scroll -10 0) ] [ text "<" ]
         , button [ onClick (Scroll 10 0) ] [ text ">" ]
+--        , div [] [ text (Debug.toString (List.length model.track)) ]
         ]
