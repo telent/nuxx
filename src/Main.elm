@@ -97,15 +97,22 @@ dragDelta d =
         None -> (0,0)
         Dragging (fx,fy) (tx,ty) -> (fx-tx, fy-ty)
 
-type alias Model = { centre: Coord, zoom: Zoom, drag: Drag }
+type alias Model = { centre: Coord, zoom: Zoom, drag: Drag, track: String }
 
 init : () -> (Model, Cmd Msg)
-init _ = (Model (toCoord 51.5 0.0) 16 None, Cmd.none)
+init _ = (Model (toCoord 51.5 0.0) 16 None "", fetch)
 
 -- SUBSCRIPTIONS
 
 subscriptions : Model -> Sub Msg
 subscriptions model = Sub.none
+
+fetch = Http.get
+        { url = "//localhost:8001/activities"
+        , expect = Http.expectString Loaded
+        }
+
+parseTrack track = track
 
 -- UPDATE
 
@@ -116,10 +123,11 @@ type Msg
   | PointerDown (Int, Int)
   | PointerMove (Int, Int)
   | PointerUp (Int, Int)
+  | Loaded (Result  Http.Error String)
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
-update msg model = (update_ msg model, Cmd.none)
+update msg model = ((update_ msg model), Cmd.none)
 
 update_ msg model =
   case msg of
@@ -141,6 +149,11 @@ update_ msg model =
     PointerUp (x,y) ->
       { model | drag = None,
                 centre = translatePixels model.centre model.zoom (dragDelta model.drag) }
+
+    Loaded result ->
+        case result of
+            Ok body -> { model | track = parseTrack body }
+            Err _ -> model
 
 -- VIEW
 
