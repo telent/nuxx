@@ -1,11 +1,23 @@
 import Browser
 import Html exposing (Html, button, div, span, text, img, pre)
-import Html.Attributes exposing (src, style, width, height)
+import Html.Attributes as H exposing (src, style, width, height)
 import Html.Events exposing (onClick)
 import Html.Events.Extra.Pointer as Pointer
 import Maybe exposing (Maybe)
 import Http
 import Json.Decode as D
+import Svg exposing (Svg, svg, rect, circle, g)
+import Svg.Attributes as S exposing
+    (width
+    , height
+    , viewBox
+    , x, y
+    , r, rx, ry
+    , cx, cy
+    , fill
+    , stroke, strokeWidth, strokeOpacity)
+
+
 
 -- MAIN
 
@@ -180,13 +192,49 @@ tileUrl {x,y} z =
                        "/", String.fromInt y,
                        ".png" ]
 
-tileImg zoom tilenumber = img [ width 256,
-                                height 256,
+tileImg zoom tilenumber = img [ width "256",
+                                height "256",
                                 src (tileUrl tilenumber zoom) ] []
+
+trackView : List Trackpoint -> Svg Msg
+trackView points =
+    svg
+    [H.style "width" "100%"
+    ,H.style "height" "100%"
+    ,H.style "position" "absolute"
+    ]
+    [ g
+      [fill "none"
+      ,stroke "blue"
+      ,strokeWidth "7"
+      ,strokeOpacity "0.5"]
+      [ rect
+        [ x "10"
+        , y "10"
+        , width "100"
+        , height "100"
+        , rx "15"
+        , ry "15"
+        ]
+        []
+      , circle
+        [ cx "50"
+        , cy "50"
+        , r "50"
+        ]
+        []
+    ]]
 
 px x = String.fromInt x ++ "px"
 
-canvas centre zoom width height =
+tiles xs ys zoom =
+    List.map
+        (\ y -> div []
+             (List.map (\ x -> tileImg zoom (TileNumber x y)) xs))
+        ys
+
+
+canvas centre zoom width height track =
     let (mintile, maxtile) = boundingTiles centre zoom width height
         -- offset is pixel difference between centre (which *should*
         -- be the middle of the image) and actual middle of the canvas
@@ -209,10 +257,7 @@ canvas centre zoom width height =
             ,Pointer.onUp (\e -> PointerUp (epos e))
             ,Pointer.onMove (\e -> PointerMove (epos e))
             ,Pointer.onDown (\e -> PointerDown (epos e)) ]
-        (List.map
-             (\ y -> div []
-                     (List.map (\ x -> tileImg zoom (TileNumber x y)) xs))
-             ys)
+        (trackView track :: tiles xs ys zoom)
 
 portalWidth = 600
 portalHeight = 600
@@ -220,14 +265,14 @@ portalHeight = 600
 view : Model -> Html Msg
 view model =
     let coord = translate model.centre (pixelsToCoord model.zoom (dragDelta model.drag))
-        tiles = canvas coord model.zoom portalWidth portalHeight
+        canvasV = canvas coord model.zoom portalWidth portalHeight model.track
     in div []
         [ (div [ style "width" (px portalWidth)
                , style "height" (px portalHeight)
                , style "display" "inline-block"
                , style "position" "relative"
                , style "overflow" "hidden"]
-               [tiles])
+               [canvasV])
         , div [] [ text (String.fromInt model.zoom ) ]
         , button [ onClick ZoomOut ] [ text "-" ]
         , button [ onClick ZoomIn ] [ text "+" ]
