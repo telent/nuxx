@@ -1,3 +1,5 @@
+module Main exposing (view)
+
 import Browser
 import Html exposing (Html, button, div, span, text, img, pre)
 import Html.Attributes as H exposing (src, style, width, height)
@@ -8,9 +10,7 @@ import Http
 import Json.Decode as D
 import Svg exposing (Svg, svg, rect, circle, g)
 import Svg.Attributes as S exposing
-    (width
-    , height
-    , viewBox
+    ( viewBox
     , x, y
     , r, rx, ry
     , cx, cy
@@ -116,7 +116,7 @@ type alias Model =
     , track: List Trackpoint }
 
 init : () -> (Model, Cmd Msg)
-init _ = (Model (toCoord 51.5 0.0) 16 None [], fetch)
+init _ = (Model (toCoord 51 0) 16 None [], fetch)
 
 -- SUBSCRIPTIONS
 
@@ -192,8 +192,8 @@ tileUrl {x,y} z =
                        "/", String.fromInt y,
                        ".png" ]
 
-tileImg zoom tilenumber = img [ width "256",
-                                height "256",
+tileImg zoom tilenumber = img [ width 256,
+                                height 256,
                                 src (tileUrl tilenumber zoom) ] []
 
 trackView : List Trackpoint -> Svg Msg
@@ -211,8 +211,8 @@ trackView points =
       [ rect
         [ x "10"
         , y "10"
-        , width "100"
-        , height "100"
+        , S.width "100"
+        , S.height "100"
         , rx "15"
         , ry "15"
         ]
